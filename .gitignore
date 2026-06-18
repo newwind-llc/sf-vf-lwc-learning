@@ -56,3 +56,6 @@ server.crt
 **/__pycache__/
 **/.venv/
 **/venv/
+
+# Playwright MCP のローカル出力（スナップショット/ログ）
+.playwright-mcp/

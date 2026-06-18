@@ -1,47 +1,168 @@
 /*
- * 月次締め帳票 プレビュー画面(HTML)用スタイル。
+ * 請求書プレビュー画面(HTML)用スタイル。
  * 静的リソースとして登録し、VF ページから <apex:stylesheet value="{!$Resource.OpportunityReportCss}"/> で参照する。
- * ※ PDF ページ側は描画エンジンの制約上、外部CSSよりインラインCSSの方が確実なため、ここは使わない。
+ * ※ PDF ページ側は描画エンジン制約のためインライン CSS を使用（ここは画面用）。
  */
-.report-preview {
-    font-family: "Hiragino Kaku Gothic ProN", "Yu Gothic", Meiryo, sans-serif;
-    max-width: 900px;
-    margin: 16px auto;
-    padding: 0 16px;
-    color: #16325c;
+.invoice {
+  font-family: "Hiragino Kaku Gothic ProN", "Yu Gothic", Meiryo, sans-serif;
+  max-width: 800px;
+  margin: 16px auto;
+  padding: 24px 28px;
+  color: #1a1a1a;
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.08);
 }
-.preview-toolbar {
-    text-align: right;
-    margin-bottom: 12px;
+.toolbar {
+  text-align: right;
+  margin-bottom: 12px;
 }
 .pdf-button {
-    display: inline-block;
-    background-color: #0070d2;
-    color: #ffffff;
-    text-decoration: none;
-    padding: 8px 18px;
-    border-radius: 4px;
-    font-weight: bold;
+  display: inline-block;
+  background-color: #0070d2;
+  color: #fff;
+  text-decoration: none;
+  padding: 8px 18px;
+  border-radius: 4px;
+  font-weight: bold;
 }
-.pdf-button:hover { background-color: #005fb2; }
-.report-preview h1 {
-    font-size: 20px;
-    border-bottom: 2px solid #0070d2;
-    padding-bottom: 6px;
+.pdf-button:hover {
+  background-color: #005fb2;
 }
-.meta-table { border-collapse: collapse; margin: 12px 0; }
-.meta-table th, .meta-table td {
-    border: 1px solid #d8dde6;
-    padding: 6px 12px;
-    text-align: left;
+
+/* ヘッダ：タイトル + 番号/発行日 */
+.inv-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-bottom: 16px;
 }
-.meta-table th { background-color: #f3f3f3; width: 90px; }
-.report-table { border-collapse: collapse; width: 100%; margin-top: 8px; }
-.report-table th, .report-table td {
-    border: 1px solid #d8dde6;
-    padding: 6px 10px;
+.inv-title {
+  font-size: 28px;
+  font-weight: bold;
+  letter-spacing: 10px;
 }
-.report-table th { background-color: #f3f3f3; }
-.report-table td.num, .report-table th.num { text-align: right; }
-.total { text-align: right; font-size: 16px; font-weight: bold; margin-top: 12px; }
-.empty-msg { margin-top: 20px; color: #c23934; }
+.inv-meta {
+  text-align: right;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+/* 宛先 / 発行元 */
+.inv-party {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+.inv-party .to {
+  flex: 1;
+}
+.to-name {
+  font-size: 18px;
+  font-weight: bold;
+  border-bottom: 1px solid #333;
+  padding-bottom: 4px;
+}
+.subject {
+  margin: 10px 0 4px;
+}
+.lead {
+  font-size: 12px;
+  color: #555;
+}
+.inv-party .from {
+  width: 280px;
+  font-size: 12px;
+  line-height: 1.6;
+  border: 1px solid #bbb;
+  border-radius: 4px;
+  padding: 10px 12px;
+}
+.from .seal {
+  text-align: right;
+  margin-top: 8px;
+  color: #c00000;
+}
+
+/* ご請求金額ボックス */
+.amount-box {
+  border-collapse: collapse;
+  margin: 8px 0 20px;
+}
+.amount-box .lbl {
+  background-color: #f0f0f0;
+  border: 1px solid #333;
+  padding: 10px 16px;
+  font-weight: bold;
+  font-size: 15px;
+}
+.amount-box .val {
+  border: 1px solid #333;
+  border-left: none;
+  padding: 10px 24px;
+  font-weight: bold;
+  font-size: 22px;
+  text-align: right;
+}
+
+/* 明細 */
+.detail {
+  border-collapse: collapse;
+  width: 100%;
+}
+.detail th,
+.detail td {
+  border: 1px solid #333;
+  padding: 6px 10px;
+  height: 22px;
+}
+.detail th {
+  background-color: #f0f0f0;
+}
+.num {
+  text-align: right;
+}
+
+/* 小計・消費税・合計 */
+.summary {
+  border-collapse: collapse;
+  width: 320px;
+  margin-left: auto;
+  margin-top: 10px;
+}
+.summary td {
+  border: 1px solid #bbb;
+  padding: 6px 12px;
+}
+.summary .s-lbl {
+  background-color: #f7f7f7;
+}
+.summary .s-val {
+  text-align: right;
+}
+.summary .grand .s-lbl,
+.summary .grand .s-val {
+  background-color: #f0f0f0;
+  font-weight: bold;
+  font-size: 15px;
+}
+
+/* 支払期限・振込先 */
+.footer-info {
+  border-collapse: collapse;
+  width: 100%;
+  margin-top: 20px;
+}
+.footer-info td {
+  padding: 6px 6px;
+  border-bottom: 1px dotted #bbb;
+}
+.footer-info .fi-lbl {
+  width: 100px;
+  font-weight: bold;
+}
+.empty-msg {
+  margin: 24px 0;
+  color: #c23934;
+}

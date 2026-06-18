@@ -84,6 +84,11 @@ private class OpportunityMonthlyReportControllerTest {
       ctrl.getTargetYearMonth(),
       '対象年月が生成されること'
     );
+
+    // 請求書金額（Amount=税抜想定, 消費税10%・切り捨て）
+    System.assert(ctrl.getSubtotal() == 100000, '小計(税抜)は100000');
+    System.assert(ctrl.getTaxAmount() == 10000, '消費税(10%)は10000');
+    System.assert(ctrl.getGrandTotal() == 110000, '合計(税込)は110000');
   }
 
   @isTest
@@ -103,6 +108,42 @@ private class OpportunityMonthlyReportControllerTest {
     System.assert(
       ctrl.totalAmount == 0,
       '合計は0であるべき。実際: ' + ctrl.totalAmount
+    );
+    System.assert(ctrl.getTaxAmount() == 0, '0件なら消費税0');
+    System.assert(ctrl.getGrandTotal() == 0, '0件なら合計0');
+  }
+
+  @isTest
+  static void invoiceFieldsArePopulated() {
+    Account acc = [SELECT Id FROM Account WHERE Name = :ACCOUNT_NAME LIMIT 1];
+
+    Test.startTest();
+    OpportunityMonthlyReportController ctrl = new OpportunityMonthlyReportController(
+      new ApexPages.StandardController(acc)
+    );
+    Test.stopTest();
+
+    System.assertNotEquals(
+      null,
+      ctrl.getInvoiceNumber(),
+      '請求書番号が生成される'
+    );
+    System.assertEquals(10, ctrl.getTaxRatePercent(), '適用税率は10%');
+    System.assert(ctrl.getPaymentDueDate() > Date.today(), '支払期限は未来日');
+    System.assertNotEquals(null, ctrl.getReportDate(), '発行日');
+    System.assertNotEquals(null, ctrl.getIssuerName(), '発行元名');
+    System.assertNotEquals(null, ctrl.getIssuerAddress(), '発行元住所');
+    System.assertNotEquals(null, ctrl.getIssuerTel(), '発行元TEL');
+    System.assertNotEquals(
+      null,
+      ctrl.getIssuerRegistrationNumber(),
+      '登録番号'
+    );
+    System.assertNotEquals(null, ctrl.getBankInfo(), '振込先');
+    System.assertEquals(
+      25,
+      ctrl.getRecordCount() + ctrl.getFillerRows().size(),
+      '明細は実件数＋空行で固定25行になる'
     );
   }
 }
