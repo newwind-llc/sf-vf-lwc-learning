@@ -1,0 +1,158 @@
+<!--
+  月次売上締め帳票 PDF 出力ページ（renderAs="pdf"）。
+  プレビュー画面の「PDF出力」リンク（/apex/OpportunityMonthlyReportPdf?id=<AccountId>）から開く。
+
+  PDF レンダリングの注意（Salesforce の PDF エンジン = Flying Saucer 系）:
+   - HTML を PDF として再レンダリングする。利用できる CSS は CSS2.1 相当に限定。
+     SLDS や @font-face は使えないため、ここではページ内インライン <style> を使う。
+   - 日本語フォントは 'Arial Unicode MS' を指定。
+   - 余白は @page { margin }、改ページは page-break-after:always（必要時）。
+   - applyHtmlTag/applyBodyTag を false にして <html>/<body> を自前で完全制御。
+-->
+<apex:page
+  standardController="Account"
+  extensions="OpportunityMonthlyReportController"
+  renderAs="pdf"
+  showHeader="false"
+  sidebar="false"
+  applyHtmlTag="false"
+  applyBodyTag="false"
+>
+  <html>
+    <head>
+      <style type="text/css">
+        @page {
+          size: A4;
+          margin: 15mm;
+          @bottom-center {
+            content: counter(page) " / " counter(pages);
+            font-size: 9px;
+            color: #666;
+          }
+        }
+        body {
+          font-family: "Arial Unicode MS";
+          font-size: 11px;
+          color: #000;
+        }
+        h1 {
+          font-size: 16px;
+          text-align: center;
+          margin: 0 0 12px 0;
+        }
+        table.meta {
+          width: 100%;
+          margin-bottom: 10px;
+          border-collapse: collapse;
+        }
+        table.meta td {
+          padding: 3px 6px;
+        }
+        table.meta td.label {
+          font-weight: bold;
+          width: 70px;
+          background-color: #f0f0f0;
+          border: 1px solid #999;
+        }
+        table.meta td.val {
+          border: 1px solid #999;
+        }
+        table.report {
+          width: 100%;
+          border-collapse: collapse;
+        }
+        table.report th,
+        table.report td {
+          border: 1px solid #333;
+          padding: 4px 6px;
+        }
+        table.report th {
+          background-color: #eeeeee;
+          font-weight: bold;
+        }
+        table.report td.num,
+        table.report th.num {
+          text-align: right;
+        }
+        .total {
+          text-align: right;
+          font-weight: bold;
+          font-size: 13px;
+          margin-top: 12px;
+        }
+        .empty {
+          margin-top: 20px;
+        }
+      </style>
+    </head>
+    <body>
+      <h1>月次売上締め帳票</h1>
+
+      <table class="meta">
+        <tr>
+          <td class="label">取引先</td>
+          <td class="val">{!Account.Name}</td>
+          <td class="label">対象年月</td>
+          <td class="val">{!targetYearMonth}</td>
+        </tr>
+        <tr>
+          <td class="label">出力日</td>
+          <td class="val">
+            <apex:outputText value="{0,date,yyyy/MM/dd}">
+              <apex:param value="{!reportDate}" />
+            </apex:outputText>
+          </td>
+          <td class="label">件数</td>
+          <td class="val">{!recordCount} 件</td>
+        </tr>
+      </table>
+
+      <apex:outputPanel
+        rendered="{!recordCount == 0}"
+        layout="block"
+        styleClass="empty"
+      >
+        当月に成立した商談はありません。
+      </apex:outputPanel>
+
+      <apex:dataTable
+        value="{!opportunities}"
+        var="opp"
+        styleClass="report"
+        rendered="{!recordCount > 0}"
+      >
+        <apex:column headerValue="商談名">
+          <apex:outputText value="{!opp.Name}" />
+        </apex:column>
+        <apex:column headerValue="フェーズ">
+          <apex:outputText value="{!opp.StageName}" />
+        </apex:column>
+        <apex:column headerValue="完了日">
+          <apex:outputText value="{0,date,yyyy/MM/dd}">
+            <apex:param value="{!opp.CloseDate}" />
+          </apex:outputText>
+        </apex:column>
+        <apex:column headerValue="金額" styleClass="num" headerClass="num">
+          <apex:outputText value="{0,number,#,##0}">
+            <apex:param value="{!opp.Amount}" />
+          </apex:outputText>
+        </apex:column>
+        <apex:column headerValue="商談所有者">
+          <apex:outputText value="{!opp.Owner.Name}" />
+        </apex:column>
+      </apex:dataTable>
+
+      <apex:outputPanel
+        rendered="{!recordCount > 0}"
+        layout="block"
+        styleClass="total"
+      >
+        金額合計：
+        <apex:outputText value="{0,number,#,##0}">
+          <apex:param value="{!totalAmount}" />
+        </apex:outputText>
+        円
+      </apex:outputPanel>
+    </body>
+  </html>
+</apex:page>

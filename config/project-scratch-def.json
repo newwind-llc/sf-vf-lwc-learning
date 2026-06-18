@@ -1,6 +1,6 @@
 {
   "orgName": "tsuboyamadaisuke company",
-  "edition": "Developer",
+  "edition": "developer",
   "features": ["EnableSetPasswordInApi"],
   "settings": {
     "lightningExperienceSettings": {

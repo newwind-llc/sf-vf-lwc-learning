@@ -1,0 +1,73 @@
+name: Quality & Security
+
+# org 不要の静的チェック群。PR（develop / main 向け）で実行する。
+# scratch org を消費しないので pr-validate.yml とは独立に高速に回る。
+
+on:
+  pull_request:
+    branches: [develop, main]
+
+permissions:
+  contents: read
+
+jobs:
+  # ── ハードコードされた鍵/トークン/秘密鍵の検出（PR 差分をスキャン）──
+  secret-scan:
+    name: Secret scan (TruffleHog)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout (差分スキャンのため全履歴)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: TruffleHog
+        # NOTE: 供給網対策としては @main ではなくコミットSHA固定が望ましい
+        uses: trufflesecurity/trufflehog@main
+        with:
+          extra_args: --results=verified,unknown
+
+  # ── 体裁(Prettier) / JS(ESLint) / LWC単体テスト(Jest) ──
+  format-lint:
+    name: Prettier / ESLint / Jest
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Install deps
+        run: npm install
+      - name: Prettier (format check)
+        # 失敗する場合はローカルで `npm run prettier` を実行して整形→コミット
+        run: npm run prettier:verify
+      - name: ESLint (LWC/Aura JS)
+        # 現状 LWC/Aura JS は未作成。対象0でも失敗しないようにする（B 着手後に本領）
+        run: npm run lint -- --no-error-on-unmatched-pattern
+      - name: LWC unit tests (Jest)
+        # sfdx-lwc-jest は「自身の -- の後」が Jest 引数。npm 経由なので -- が二重になる点に注意。
+        # 現状 LWC は未作成。0件でも落ちないよう --passWithNoTests（B 着手後に本領）。
+        run: npm run test:unit -- -- --passWithNoTests
+
+  # ── Salesforce 公式の静的解析（Apex=PMD / JS=ESLint / RetireJS 等）──
+  code-analyzer:
+    name: Salesforce Code Analyzer
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Install Salesforce CLI + Code Analyzer (v5)
+        run: |
+          npm install --global @salesforce/cli
+          sf plugins install code-analyzer
+      - name: Run Code Analyzer (まずはレポートのみ)
+        # ゲート化する場合は末尾に `--severity-threshold 3`（Moderate以上で失敗）を付ける。
+        # ※ PMD の CRUD/FLS 系ルールは WITH USER_MODE を解さず誤検知し得る → 必要なら code-analyzer.yml で調整。
+        run: sf code-analyzer run --workspace ./force-app --view detail --output-file code-analyzer-results.html
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: code-analyzer-results
+          path: code-analyzer-results.html

@@ -42,6 +42,16 @@ $RECYCLE.BIN/
 # Local environment variables
 .env
 
+# CI/CD secrets — JWT 秘密鍵/証明書は絶対にコミットしない（GitHub Secrets で管理）
+server.key
+server.crt
+*.key
+*.crt
+*.pem
+
+# Serena MCP のローカルプロジェクト状態（ツール固有・コミット不要）
+.serena/
+
 # Python Salesforce Functions
 **/__pycache__/
 **/.venv/

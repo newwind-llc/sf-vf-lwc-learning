@@ -1,0 +1,46 @@
+name: Deploy to Production (DE)
+
+# main へのマージ(push)で起動。本番扱いの DE org へデプロイする。
+# RunLocalTests でテスト実行 → カバレッジを確認しつつ反映する。
+
+on:
+  push:
+    branches: [main]
+
+concurrency:
+  group: deploy-prod
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install Salesforce CLI
+        run: npm install --global @salesforce/cli
+
+      - name: Decode JWT private key
+        run: echo "${{ secrets.SF_JWT_KEY_B64 }}" | base64 --decode > server.key
+
+      - name: Authenticate Production (JWT)
+        run: |
+          sf org login jwt \
+            --username "${{ secrets.SF_USERNAME }}" \
+            --jwt-key-file server.key \
+            --client-id "${{ secrets.SF_CONSUMER_KEY }}" \
+            --instance-url https://login.salesforce.com \
+            --alias prod --set-default
+
+      - name: Deploy to Production
+        run: |
+          sf project deploy start \
+            --source-dir force-app \
+            --test-level RunLocalTests \
+            --target-org prod

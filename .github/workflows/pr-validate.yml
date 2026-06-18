@@ -1,0 +1,59 @@
+name: PR Validate (scratch org)
+
+# develop へのプルリクエストで起動。
+# 使い捨ての scratch org を作成し、force-app をデプロイ + Apex テストを実行して破棄する。
+#
+# 認証は SFDX Auth URL（リフレッシュトークン方式）。
+# 理由: JWT は scratch org のログインに使えない（新規 scratch に接続アプリ/証明書が無く
+#       "invalid assertion" になる）。scratch を作る Dev Hub 認証はリフレッシュトークン方式が必要。
+#       これは公式 lwc-recipes の CI と同じ方式。
+# ※ 本番デプロイ(deploy-prod.yml)は JWT のまま（deploy は JWT で動くため）。
+
+on:
+  pull_request:
+    branches: [develop]
+
+# 同一PRで新しいpushが来たら古い実行をキャンセル
+concurrency:
+  group: pr-validate-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install Salesforce CLI
+        run: npm install --global @salesforce/cli
+
+      - name: Authenticate Dev Hub (SFDX Auth URL)
+        run: |
+          printf '%s' "${{ secrets.DEVHUB_SFDX_URL }}" > /tmp/sfdx_auth_url.txt
+          sf org login sfdx-url --sfdx-url-file /tmp/sfdx_auth_url.txt --alias devhub --set-default-dev-hub
+
+      - name: Create scratch org
+        run: |
+          sf org create scratch \
+            --definition-file config/project-scratch-def.json \
+            --alias ci-scratch --set-default \
+            --duration-days 1 --wait 10
+
+      - name: Deploy source to scratch org (= コンパイル/構成検証)
+        run: sf project deploy start --source-dir force-app --target-org ci-scratch
+
+      - name: Run Apex tests
+        run: |
+          sf apex run test --target-org ci-scratch \
+            --test-level RunLocalTests --code-coverage \
+            --result-format human --wait 10
+
+      - name: Delete scratch org
+        if: always()
+        run: sf org delete scratch --target-org ci-scratch --no-prompt

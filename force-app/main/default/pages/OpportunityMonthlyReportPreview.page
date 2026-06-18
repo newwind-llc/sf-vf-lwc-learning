@@ -1,0 +1,94 @@
+<!--
+  月次売上締め帳票 プレビュー画面（HTML）。
+  取引先詳細画面のカスタムボタンから起動。当月に成立(Closed Won)した関連商談を
+  画面で確認し、問題なければ右上「PDF出力」ボタンで PDF 版を新規タブに開く。
+
+  - standardController="Account" + 拡張コントローラ。{!Account.xxx} は標準コントローラ、
+    {!opportunities} / {!totalAmount} 等は拡張コントローラが提供する。
+  - 画面表示用 CSS は静的リソース(OpportunityReportCss)を外部参照する学習例。
+    （PDF 側は描画エンジン都合でページ内インライン CSS を使う：別ページ参照）
+-->
+<apex:page
+  standardController="Account"
+  extensions="OpportunityMonthlyReportController"
+  title="月次締め帳票 プレビュー"
+  showHeader="false"
+  sidebar="false"
+>
+  <apex:stylesheet value="{!$Resource.OpportunityReportCss}" />
+
+  <div class="report-preview">
+    <div class="preview-toolbar">
+      <apex:outputLink
+        value="/apex/OpportunityMonthlyReportPdf?id={!Account.Id}"
+        target="_blank"
+        styleClass="pdf-button"
+        >PDF出力</apex:outputLink
+      >
+    </div>
+
+    <h1>月次売上締め帳票（プレビュー）</h1>
+
+    <table class="meta-table">
+      <tr>
+        <th>取引先</th>
+        <td>{!Account.Name}</td>
+        <th>対象年月</th>
+        <td>{!targetYearMonth}</td>
+      </tr>
+      <tr>
+        <th>出力日</th>
+        <td>
+          <apex:outputText value="{0,date,yyyy/MM/dd}">
+            <apex:param value="{!reportDate}" />
+          </apex:outputText>
+        </td>
+        <th>件数</th>
+        <td>{!recordCount} 件</td>
+      </tr>
+    </table>
+
+    <apex:outputPanel rendered="{!recordCount == 0}" layout="block">
+      <p class="empty-msg">当月に成立した商談はありません。</p>
+    </apex:outputPanel>
+
+    <apex:dataTable
+      value="{!opportunities}"
+      var="opp"
+      styleClass="report-table"
+      rendered="{!recordCount > 0}"
+    >
+      <apex:column headerValue="商談名">
+        <apex:outputText value="{!opp.Name}" />
+      </apex:column>
+      <apex:column headerValue="フェーズ">
+        <apex:outputText value="{!opp.StageName}" />
+      </apex:column>
+      <apex:column headerValue="完了日">
+        <apex:outputText value="{0,date,yyyy/MM/dd}">
+          <apex:param value="{!opp.CloseDate}" />
+        </apex:outputText>
+      </apex:column>
+      <apex:column headerValue="金額" styleClass="num" headerClass="num">
+        <apex:outputText value="{0,number,#,##0}">
+          <apex:param value="{!opp.Amount}" />
+        </apex:outputText>
+      </apex:column>
+      <apex:column headerValue="商談所有者">
+        <apex:outputText value="{!opp.Owner.Name}" />
+      </apex:column>
+    </apex:dataTable>
+
+    <apex:outputPanel
+      rendered="{!recordCount > 0}"
+      layout="block"
+      styleClass="total"
+    >
+      金額合計：
+      <apex:outputText value="{0,number,#,##0}">
+        <apex:param value="{!totalAmount}" />
+      </apex:outputText>
+      円
+    </apex:outputPanel>
+  </div>
+</apex:page>
