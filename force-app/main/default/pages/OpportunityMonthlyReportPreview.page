@@ -1,24 +1,23 @@
 <!--
-  月次売上締め帳票 プレビュー画面（HTML）。
-  取引先詳細画面のカスタムボタンから起動。当月に成立(Closed Won)した関連商談を
-  画面で確認し、問題なければ右上「PDF出力」ボタンで PDF 版を新規タブに開く。
+  月次売上締め帳票 プレビュー画面（HTML・請求書レイアウト）。
+  取引先詳細のカスタムボタンから起動。当月成立(Closed Won)商談を請求書スタイルで表示し、
+  右上「PDF出力」で PDF 版（A4, renderAs="pdf"）を新規タブで開く。
 
-  - standardController="Account" + 拡張コントローラ。{!Account.xxx} は標準コントローラ、
-    {!opportunities} / {!totalAmount} 等は拡張コントローラが提供する。
-  - 画面表示用 CSS は静的リソース(OpportunityReportCss)を外部参照する学習例。
-    （PDF 側は描画エンジン都合でページ内インライン CSS を使う：別ページ参照）
+  - standardController="Account" + 拡張コントローラ。{!Account.xxx}=標準, {!opportunities}/{!fillerRows}/{!grandTotal} 等=拡張。
+  - 明細は固定行数（空行で補完）。PDF と同じ見え方にするため画面でも固定。
+  - 画面表示用 CSS は静的リソース(OpportunityReportCss)を外部参照（PDF 側はインラインCSS）。
 -->
 <apex:page
   standardController="Account"
   extensions="OpportunityMonthlyReportController"
-  title="月次締め帳票 プレビュー"
+  title="請求書 プレビュー"
   showHeader="false"
   sidebar="false"
 >
   <apex:stylesheet value="{!$Resource.OpportunityReportCss}" />
 
-  <div class="report-preview">
-    <div class="preview-toolbar">
+  <div class="invoice">
+    <div class="toolbar">
       <apex:outputLink
         value="/apex/OpportunityMonthlyReportPdf?id={!Account.Id}"
         target="_blank"
@@ -27,68 +26,132 @@
       >
     </div>
 
-    <h1>月次売上締め帳票（プレビュー）</h1>
-
-    <table class="meta-table">
-      <tr>
-        <th>取引先</th>
-        <td>{!Account.Name}</td>
-        <th>対象年月</th>
-        <td>{!targetYearMonth}</td>
-      </tr>
-      <tr>
-        <th>出力日</th>
-        <td>
+    <div class="inv-head">
+      <div class="inv-title">請　求　書</div>
+      <div class="inv-meta">
+        <div>No. {!invoiceNumber}</div>
+        <div>
+          発行日：
           <apex:outputText value="{0,date,yyyy/MM/dd}">
             <apex:param value="{!reportDate}" />
           </apex:outputText>
+        </div>
+      </div>
+    </div>
+
+    <div class="inv-party">
+      <div class="to">
+        <div class="to-name">{!Account.Name}　御中</div>
+        <div class="subject">件名： {!targetYearMonth} ご請求分</div>
+        <div class="lead">下記のとおりご請求申し上げます。</div>
+      </div>
+      <div class="from">
+        <div>{!issuerName}</div>
+        <div>{!issuerAddress}</div>
+        <div>{!issuerTel}</div>
+        <div>登録番号 {!issuerRegistrationNumber}</div>
+        <div class="seal">［印］</div>
+      </div>
+    </div>
+
+    <table class="amount-box">
+      <tr>
+        <td class="lbl">ご請求金額（税込）</td>
+        <td class="val">
+          ¥
+          <apex:outputText value="{0,number,#,##0}">
+            <apex:param value="{!grandTotal}" />
+          </apex:outputText>
+          -
         </td>
-        <th>件数</th>
-        <td>{!recordCount} 件</td>
       </tr>
     </table>
 
-    <apex:outputPanel rendered="{!recordCount == 0}" layout="block">
-      <p class="empty-msg">当月に成立した商談はありません。</p>
-    </apex:outputPanel>
+    <!-- 明細：実データ＋空行で固定15行 -->
+    <table class="detail">
+      <tr>
+        <th>取引日</th>
+        <th>品目・摘要</th>
+        <th class="num">数量</th>
+        <th class="num">単価</th>
+        <th class="num">金額</th>
+      </tr>
+      <apex:repeat value="{!opportunities}" var="opp">
+        <tr>
+          <td>
+            <apex:outputText value="{0,date,yyyy/MM/dd}">
+              <apex:param value="{!opp.CloseDate}" />
+            </apex:outputText>
+          </td>
+          <td>{!opp.Name}</td>
+          <td class="num">1</td>
+          <td class="num">
+            <apex:outputText value="{0,number,#,##0}">
+              <apex:param value="{!opp.Amount}" />
+            </apex:outputText>
+          </td>
+          <td class="num">
+            <apex:outputText value="{0,number,#,##0}">
+              <apex:param value="{!opp.Amount}" />
+            </apex:outputText>
+          </td>
+        </tr>
+      </apex:repeat>
+      <apex:repeat value="{!fillerRows}" var="f">
+        <tr>
+          <td>&#160;</td>
+          <td></td>
+          <td class="num"></td>
+          <td class="num"></td>
+          <td class="num"></td>
+        </tr>
+      </apex:repeat>
+    </table>
 
-    <apex:dataTable
-      value="{!opportunities}"
-      var="opp"
-      styleClass="report-table"
-      rendered="{!recordCount > 0}"
-    >
-      <apex:column headerValue="商談名">
-        <apex:outputText value="{!opp.Name}" />
-      </apex:column>
-      <apex:column headerValue="フェーズ">
-        <apex:outputText value="{!opp.StageName}" />
-      </apex:column>
-      <apex:column headerValue="完了日">
-        <apex:outputText value="{0,date,yyyy/MM/dd}">
-          <apex:param value="{!opp.CloseDate}" />
-        </apex:outputText>
-      </apex:column>
-      <apex:column headerValue="金額" styleClass="num" headerClass="num">
-        <apex:outputText value="{0,number,#,##0}">
-          <apex:param value="{!opp.Amount}" />
-        </apex:outputText>
-      </apex:column>
-      <apex:column headerValue="商談所有者">
-        <apex:outputText value="{!opp.Owner.Name}" />
-      </apex:column>
-    </apex:dataTable>
+    <!-- 固定表の下に 小計〜合計（右寄せ） -->
+    <table class="summary">
+      <tr>
+        <td class="s-lbl">小計（税抜）</td>
+        <td class="s-val">
+          ¥
+          <apex:outputText value="{0,number,#,##0}">
+            <apex:param value="{!subtotal}" />
+          </apex:outputText>
+        </td>
+      </tr>
+      <tr>
+        <td class="s-lbl">消費税（{!taxRatePercent}%）</td>
+        <td class="s-val">
+          ¥
+          <apex:outputText value="{0,number,#,##0}">
+            <apex:param value="{!taxAmount}" />
+          </apex:outputText>
+        </td>
+      </tr>
+      <tr class="grand">
+        <td class="s-lbl">合計（税込）</td>
+        <td class="s-val">
+          ¥
+          <apex:outputText value="{0,number,#,##0}">
+            <apex:param value="{!grandTotal}" />
+          </apex:outputText>
+        </td>
+      </tr>
+    </table>
 
-    <apex:outputPanel
-      rendered="{!recordCount > 0}"
-      layout="block"
-      styleClass="total"
-    >
-      金額合計：
-      <apex:outputText value="{0,number,#,##0}">
-        <apex:param value="{!totalAmount}" />
-      </apex:outputText>
-      円
-    </apex:outputPanel>
+    <table class="footer-info">
+      <tr>
+        <td class="fi-lbl">お支払期限</td>
+        <td>
+          <apex:outputText value="{0,date,yyyy年M月d日}">
+            <apex:param value="{!paymentDueDate}" />
+          </apex:outputText>
+        </td>
+      </tr>
+      <tr>
+        <td class="fi-lbl">お振込先</td>
+        <td>{!bankInfo}</td>
+      </tr>
+    </table>
   </div>
 </apex:page>
