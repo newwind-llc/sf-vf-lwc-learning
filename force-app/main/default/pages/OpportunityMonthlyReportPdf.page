@@ -1,13 +1,12 @@
 <!--
-  月次売上締め帳票 PDF 出力ページ（renderAs="pdf"）。
+  月次売上締め帳票 PDF（日本の請求書レイアウト, A4, renderAs="pdf"）。
   プレビュー画面の「PDF出力」リンク（/apex/OpportunityMonthlyReportPdf?id=<AccountId>）から開く。
 
-  PDF レンダリングの注意（Salesforce の PDF エンジン = Flying Saucer 系）:
-   - HTML を PDF として再レンダリングする。利用できる CSS は CSS2.1 相当に限定。
-     SLDS や @font-face は使えないため、ここではページ内インライン <style> を使う。
-   - 日本語フォントは 'Arial Unicode MS' を指定。
-   - 余白は @page { margin }、改ページは page-break-after:always（必要時）。
-   - applyHtmlTag/applyBodyTag を false にして <html>/<body> を自前で完全制御。
+  PDF レンダリング注意（Flying Saucer 系）:
+   - 用紙は @page{size:A4}。利用可能 CSS は CSS2.1 相当。SLDS/@font-face 不可。レイアウトは table。
+   - 日本語フォントは 'Arial Unicode MS'。
+   - 明細表は固定行数（コントローラの getFillerRows で空行を補い、常に同じ高さ）。その下に小計〜合計。
+  ※ 発行元/登録番号/振込先/請求書番号/消費税はコントローラ側の仮置き・計算（要設定）。
 -->
 <apex:page
   standardController="Account"
@@ -23,136 +22,270 @@
       <style type="text/css">
         @page {
           size: A4;
-          margin: 15mm;
-          @bottom-center {
-            content: counter(page) " / " counter(pages);
-            font-size: 9px;
-            color: #666;
-          }
+          margin: 14mm;
         }
         body {
           font-family: "Arial Unicode MS";
           font-size: 11px;
           color: #000;
         }
-        h1 {
-          font-size: 16px;
-          text-align: center;
-          margin: 0 0 12px 0;
+        table {
+          border-collapse: collapse;
         }
-        table.meta {
+        .hdr {
+          width: 100%;
+          margin-bottom: 6px;
+        }
+        .hdr .title {
+          font-size: 24px;
+          font-weight: bold;
+          letter-spacing: 8px;
+        }
+        .hdr .hdr-meta {
+          text-align: right;
+          vertical-align: bottom;
+          font-size: 11px;
+        }
+        .party {
           width: 100%;
           margin-bottom: 10px;
-          border-collapse: collapse;
         }
-        table.meta td {
-          padding: 3px 6px;
+        .party td {
+          vertical-align: top;
         }
-        table.meta td.label {
+        .party .to {
+          width: 58%;
+          padding-right: 12px;
+        }
+        .to-name {
+          font-size: 15px;
           font-weight: bold;
-          width: 70px;
-          background-color: #f0f0f0;
+          border-bottom: 1px solid #000;
+          padding-bottom: 3px;
+        }
+        .subject {
+          margin: 8px 0 4px 0;
+        }
+        .lead {
+          font-size: 10px;
+        }
+        .party .from {
+          width: 42%;
+          font-size: 10px;
           border: 1px solid #999;
+          padding: 6px 8px;
         }
-        table.meta td.val {
-          border: 1px solid #999;
+        .from .seal {
+          text-align: right;
+          margin-top: 6px;
+          color: #c00000;
         }
-        table.report {
-          width: 100%;
-          border-collapse: collapse;
+        .amount-box {
+          margin: 8px 0 14px 0;
         }
-        table.report th,
-        table.report td {
-          border: 1px solid #333;
-          padding: 4px 6px;
-        }
-        table.report th {
+        .amount-box .lbl {
           background-color: #eeeeee;
-          font-weight: bold;
-        }
-        table.report td.num,
-        table.report th.num {
-          text-align: right;
-        }
-        .total {
-          text-align: right;
+          border: 1px solid #333;
+          padding: 6px 12px;
           font-weight: bold;
           font-size: 13px;
-          margin-top: 12px;
         }
-        .empty {
-          margin-top: 20px;
+        .amount-box .val {
+          border: 1px solid #333;
+          border-left: none;
+          padding: 6px 16px;
+          font-weight: bold;
+          font-size: 17px;
+          text-align: right;
+        }
+        table.detail {
+          width: 100%;
+        }
+        table.detail th,
+        table.detail td {
+          border: 1px solid #333;
+          padding: 4px 6px;
+          height: 6mm;
+          vertical-align: top;
+        }
+        table.detail th {
+          background-color: #eeeeee;
+          text-align: center;
+          height: auto;
+        }
+        .num {
+          text-align: right;
+        }
+        table.summary {
+          width: 100%;
+        }
+        table.summary td {
+          padding: 4px 8px;
+          border: 1px solid #999;
+        }
+        table.summary .s-lbl {
+          background-color: #f5f5f5;
+        }
+        table.summary .s-val {
+          text-align: right;
+        }
+        table.summary .grand .s-lbl,
+        table.summary .grand .s-val {
+          background-color: #eeeeee;
+          font-weight: bold;
+          font-size: 13px;
+        }
+        table.footer-info {
+          width: 100%;
+          margin-top: 14px;
+        }
+        table.footer-info td {
+          padding: 4px 4px;
+          border-bottom: 1px dotted #999;
+        }
+        table.footer-info .fi-lbl {
+          width: 90px;
+          font-weight: bold;
         }
       </style>
     </head>
     <body>
-      <h1>月次売上締め帳票</h1>
-
-      <table class="meta">
+      <table class="hdr">
         <tr>
-          <td class="label">取引先</td>
-          <td class="val">{!Account.Name}</td>
-          <td class="label">対象年月</td>
-          <td class="val">{!targetYearMonth}</td>
-        </tr>
-        <tr>
-          <td class="label">出力日</td>
-          <td class="val">
+          <td class="title">請　求　書</td>
+          <td class="hdr-meta">
+            No. {!invoiceNumber}<br />
+            発行日：
             <apex:outputText value="{0,date,yyyy/MM/dd}">
               <apex:param value="{!reportDate}" />
             </apex:outputText>
           </td>
-          <td class="label">件数</td>
-          <td class="val">{!recordCount} 件</td>
         </tr>
       </table>
 
-      <apex:outputPanel
-        rendered="{!recordCount == 0}"
-        layout="block"
-        styleClass="empty"
-      >
-        当月に成立した商談はありません。
-      </apex:outputPanel>
+      <table class="party">
+        <tr>
+          <td class="to">
+            <div class="to-name">{!Account.Name}　御中</div>
+            <div class="subject">件名： {!targetYearMonth} ご請求分</div>
+            <div class="lead">下記のとおりご請求申し上げます。</div>
+          </td>
+          <td class="from">
+            <div>{!issuerName}</div>
+            <div>{!issuerAddress}</div>
+            <div>{!issuerTel}</div>
+            <div>登録番号 {!issuerRegistrationNumber}</div>
+            <div class="seal">［印］</div>
+          </td>
+        </tr>
+      </table>
 
-      <apex:dataTable
-        value="{!opportunities}"
-        var="opp"
-        styleClass="report"
-        rendered="{!recordCount > 0}"
-      >
-        <apex:column headerValue="商談名">
-          <apex:outputText value="{!opp.Name}" />
-        </apex:column>
-        <apex:column headerValue="フェーズ">
-          <apex:outputText value="{!opp.StageName}" />
-        </apex:column>
-        <apex:column headerValue="完了日">
-          <apex:outputText value="{0,date,yyyy/MM/dd}">
-            <apex:param value="{!opp.CloseDate}" />
-          </apex:outputText>
-        </apex:column>
-        <apex:column headerValue="金額" styleClass="num" headerClass="num">
-          <apex:outputText value="{0,number,#,##0}">
-            <apex:param value="{!opp.Amount}" />
-          </apex:outputText>
-        </apex:column>
-        <apex:column headerValue="商談所有者">
-          <apex:outputText value="{!opp.Owner.Name}" />
-        </apex:column>
-      </apex:dataTable>
+      <table class="amount-box">
+        <tr>
+          <td class="lbl">ご請求金額（税込）</td>
+          <td class="val">
+            ¥
+            <apex:outputText value="{0,number,#,##0}">
+              <apex:param value="{!grandTotal}" />
+            </apex:outputText>
+            -
+          </td>
+        </tr>
+      </table>
 
-      <apex:outputPanel
-        rendered="{!recordCount > 0}"
-        layout="block"
-        styleClass="total"
-      >
-        金額合計：
-        <apex:outputText value="{0,number,#,##0}">
-          <apex:param value="{!totalAmount}" />
-        </apex:outputText>
-        円
-      </apex:outputPanel>
+      <!-- 明細：実データ＋空行で固定15行 -->
+      <table class="detail">
+        <tr>
+          <th>取引日</th>
+          <th>品目・摘要</th>
+          <th class="num">数量</th>
+          <th class="num">単価</th>
+          <th class="num">金額</th>
+        </tr>
+        <apex:repeat value="{!opportunities}" var="opp">
+          <tr>
+            <td>
+              <apex:outputText value="{0,date,yyyy/MM/dd}">
+                <apex:param value="{!opp.CloseDate}" />
+              </apex:outputText>
+            </td>
+            <td>{!opp.Name}</td>
+            <td class="num">1</td>
+            <td class="num">
+              <apex:outputText value="{0,number,#,##0}">
+                <apex:param value="{!opp.Amount}" />
+              </apex:outputText>
+            </td>
+            <td class="num">
+              <apex:outputText value="{0,number,#,##0}">
+                <apex:param value="{!opp.Amount}" />
+              </apex:outputText>
+            </td>
+          </tr>
+        </apex:repeat>
+        <apex:repeat value="{!fillerRows}" var="f">
+          <tr>
+            <td>&#160;</td>
+            <td></td>
+            <td class="num"></td>
+            <td class="num"></td>
+            <td class="num"></td>
+          </tr>
+        </apex:repeat>
+      </table>
+
+      <!-- 固定表の下に 小計〜合計（右寄せ） -->
+      <table class="hdr" style="margin-top: 8px">
+        <tr>
+          <td style="width: 58%"></td>
+          <td style="width: 42%">
+            <table class="summary">
+              <tr>
+                <td class="s-lbl">小計（税抜）</td>
+                <td class="s-val">
+                  ¥
+                  <apex:outputText value="{0,number,#,##0}">
+                    <apex:param value="{!subtotal}" />
+                  </apex:outputText>
+                </td>
+              </tr>
+              <tr>
+                <td class="s-lbl">消費税（{!taxRatePercent}%）</td>
+                <td class="s-val">
+                  ¥
+                  <apex:outputText value="{0,number,#,##0}">
+                    <apex:param value="{!taxAmount}" />
+                  </apex:outputText>
+                </td>
+              </tr>
+              <tr class="grand">
+                <td class="s-lbl">合計（税込）</td>
+                <td class="s-val">
+                  ¥
+                  <apex:outputText value="{0,number,#,##0}">
+                    <apex:param value="{!grandTotal}" />
+                  </apex:outputText>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+
+      <table class="footer-info">
+        <tr>
+          <td class="fi-lbl">お支払期限</td>
+          <td>
+            <apex:outputText value="{0,date,yyyy年M月d日}">
+              <apex:param value="{!paymentDueDate}" />
+            </apex:outputText>
+          </td>
+        </tr>
+        <tr>
+          <td class="fi-lbl">お振込先</td>
+          <td>{!bankInfo}</td>
+        </tr>
+      </table>
     </body>
   </html>
 </apex:page>
