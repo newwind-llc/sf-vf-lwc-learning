@@ -1,13 +1,16 @@
-name: PR Validate (scratch org)
+name: PR Validate
 
-# develop へのプルリクエストで起動。
-# 使い捨ての scratch org を作成し、force-app をデプロイ + Apex テストを実行して破棄する。
+# develop へのプルリクエストで起動。PR のコードを検証する（コンパイル＋Apexテスト）。
 #
-# 認証は SFDX Auth URL（リフレッシュトークン方式）。
-# 理由: JWT は scratch org のログインに使えない（新規 scratch に接続アプリ/証明書が無く
-#       "invalid assertion" になる）。scratch を作る Dev Hub 認証はリフレッシュトークン方式が必要。
-#       これは公式 lwc-recipes の CI と同じ方式。
-# ※ 本番デプロイ(deploy-prod.yml)は JWT のまま（deploy は JWT で動くため）。
+# 【現在のモード】B：DE 組織へ check-only の検証デプロイ（scratch を作らない）
+#   - 理由：無料 Developer Edition は scratch 作成が「1日6個」上限。LWC 開発中は頻繁に
+#     PR を回すため、scratch を消費しない `deploy validate`（check-only）にしている。
+#   - 認証は deploy-prod と同じ JWT（SF_JWT_KEY_B64 / SF_CONSUMER_KEY / SF_USERNAME）。
+#   - check-only なので DE 組織は変更されない。`DEVHUB_SFDX_URL` は未使用（A 復活時に使う）。
+#
+# 【A（scratch）に戻す手順】LWC が一段落し「まっさら scratch で隔離検証」に戻したい時：
+#   1. 下の「=== モードB ===」3ステップをコメントアウトする
+#   2. 下の「=== モードA（scratch）===」ブロックの各行頭の `# ` を外して有効化する
 
 on:
   pull_request:
@@ -33,27 +36,51 @@ jobs:
       - name: Install Salesforce CLI
         run: npm install --global @salesforce/cli
 
-      - name: Authenticate Dev Hub (SFDX Auth URL)
+      # ============ モードB（現在有効）：DE へ check-only 検証デプロイ ============
+      - name: Decode JWT private key
+        run: echo "${{ secrets.SF_JWT_KEY_B64 }}" | base64 --decode > server.key
+
+      - name: Authenticate DE (JWT)
         run: |
-          printf '%s' "${{ secrets.DEVHUB_SFDX_URL }}" > /tmp/sfdx_auth_url.txt
-          sf org login sfdx-url --sfdx-url-file /tmp/sfdx_auth_url.txt --alias devhub --set-default-dev-hub
+          sf org login jwt \
+            --username "${{ secrets.SF_USERNAME }}" \
+            --jwt-key-file server.key \
+            --client-id "${{ secrets.SF_CONSUMER_KEY }}" \
+            --instance-url https://login.salesforce.com \
+            --alias target --set-default
 
-      - name: Create scratch org
+      - name: Validate deploy against DE (check-only + Apex tests)
         run: |
-          sf org create scratch \
-            --definition-file config/project-scratch-def.json \
-            --alias ci-scratch --set-default \
-            --duration-days 1 --wait 10
+          sf project deploy validate \
+            --source-dir force-app \
+            --test-level RunLocalTests \
+            --target-org target
 
-      - name: Deploy source to scratch org (= コンパイル/構成検証)
-        run: sf project deploy start --source-dir force-app --target-org ci-scratch
-
-      - name: Run Apex tests
-        run: |
-          sf apex run test --target-org ci-scratch \
-            --test-level RunLocalTests --code-coverage \
-            --result-format human --wait 10
-
-      - name: Delete scratch org
-        if: always()
-        run: sf org delete scratch --target-org ci-scratch --no-prompt
+      # ============ モードA（scratch・現在は無効）============
+      # LWC 完成後など「まっさら scratch で検証」に戻す時は、上の「モードB」3ステップを
+      # コメントアウトし、以下の各行頭の `# ` を外して有効化する。
+      #
+      # - name: Authenticate Dev Hub (SFDX Auth URL)
+      #   run: |
+      #     printf '%s' "${{ secrets.DEVHUB_SFDX_URL }}" > /tmp/sfdx_auth_url.txt
+      #     sf org login sfdx-url --sfdx-url-file /tmp/sfdx_auth_url.txt --alias devhub --set-default-dev-hub
+      #
+      # - name: Create scratch org
+      #   run: |
+      #     sf org create scratch \
+      #       --definition-file config/project-scratch-def.json \
+      #       --alias ci-scratch --set-default \
+      #       --duration-days 1 --wait 10
+      #
+      # - name: Deploy source to scratch org (= コンパイル/構成検証)
+      #   run: sf project deploy start --source-dir force-app --target-org ci-scratch
+      #
+      # - name: Run Apex tests
+      #   run: |
+      #     sf apex run test --target-org ci-scratch \
+      #       --test-level RunLocalTests --code-coverage \
+      #       --result-format human --wait 10
+      #
+      # - name: Delete scratch org
+      #   if: always()
+      #   run: sf org delete scratch --target-org ci-scratch --no-prompt
