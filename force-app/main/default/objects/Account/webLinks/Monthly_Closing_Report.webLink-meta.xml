@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<WebLink xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Monthly_Closing_Report</fullName>
+    <availability>online</availability>
+    <description
+  >当月に成立(Closed Won)した関連商談の月次締め帳票プレビューを開く詳細画面ボタン。</description>
+    <displayType>button</displayType>
+    <encodingKey>UTF-8</encodingKey>
+    <height>600</height>
+    <linkType>page</linkType>
+    <masterLabel>月次締め帳票</masterLabel>
+    <openType>noSidebar</openType>
+    <page>OpportunityMonthlyReportPreview</page>
+    <protected>false</protected>
+</WebLink>
