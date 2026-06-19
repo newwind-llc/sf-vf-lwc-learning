@@ -1,0 +1,73 @@
+<template>
+  <lightning-card
+    title="商談カンバン（パイプライン）"
+    icon-name="standard:opportunity"
+  >
+    <lightning-button-icon
+      slot="actions"
+      icon-name="utility:refresh"
+      alternative-text="更新"
+      title="更新"
+      onclick={handleRefresh}
+    ></lightning-button-icon>
+
+    <div class="slds-is-relative slds-p-horizontal_small">
+      <template lwc:if={isLoading}>
+        <lightning-spinner
+          alternative-text="更新中"
+          size="small"
+        ></lightning-spinner>
+      </template>
+
+      <template lwc:if={hasError}>
+        <div class="slds-text-color_error slds-p-around_small" role="alert">
+          {error}
+        </div>
+      </template>
+
+      <template lwc:if={isEmpty}>
+        <div
+          class="slds-p-around_medium slds-text-align_center slds-text-color_weak"
+        >
+          表示できる商談がありません。
+        </div>
+      </template>
+
+      <div class="kanban-board">
+        <template for:each={columns} for:item="col">
+          <div
+            key={col.key}
+            class={col.cssClass}
+            data-stage={col.apiName}
+            ondragover={handleDragOver}
+            ondrop={handleDrop}
+          >
+            <div class="kanban-column__header">
+              <span class="kanban-column__title">{col.label}</span>
+              <span class="kanban-column__meta"
+                >{col.count}件 ・ {col.formattedTotal}</span
+              >
+            </div>
+            <div class="kanban-column__body">
+              <template for:each={col.cards} for:item="card">
+                <div
+                  key={card.id}
+                  class="kanban-card"
+                  draggable="true"
+                  data-id={card.id}
+                  ondragstart={handleDragStart}
+                >
+                  <div class="kanban-card__name">{card.name}</div>
+                  <div class="kanban-card__amount">{card.formattedAmount}</div>
+                  <div class="kanban-card__meta">
+                    {card.closeDate} ・ {card.owner}
+                  </div>
+                </div>
+              </template>
+            </div>
+          </div>
+        </template>
+      </div>
+    </div>
+  </lightning-card>
+</template>
