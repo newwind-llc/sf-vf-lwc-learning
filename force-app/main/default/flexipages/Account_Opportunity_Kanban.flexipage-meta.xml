@@ -13,6 +13,12 @@
     <flexiPageRegions>
         <itemInstances>
             <componentInstance>
+                <componentName>c:account360</componentName>
+                <identifier>account360_1</identifier>
+            </componentInstance>
+        </itemInstances>
+        <itemInstances>
+            <componentInstance>
                 <componentName>c:opportunityKanban</componentName>
                 <identifier>opportunityKanban1</identifier>
             </componentInstance>
