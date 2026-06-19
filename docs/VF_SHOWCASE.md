@@ -10,7 +10,7 @@
 - **集計ロジック**：`IsWon = true AND CloseDate = THIS_MONTH`（フェーズ名直書きでなく成立フラグで判定）
 - **請求書要素**：消費税10%計算、明細の固定行（A4で体裁を一定化）、インボイス制度の記載項目（登録番号・税率ごとの消費税 等）に準拠
 - **起動**：取引先カスタムボタン（WebLink）→ ページレイアウトの Lightning アクションに配置（**レイアウトもコード管理**）
-- **CI/CD**：GitHub Actions（PR で scratch org に自動デプロイ＋Apexテスト100%、main マージで Developer Edition へ自動デプロイ）
+- **CI/CD**：GitHub Actions の対象（PR で検証＋Apex テスト＋各種チェック、`main` マージで Developer Edition へ自動デプロイ）
 
 ---
 
@@ -32,36 +32,9 @@
 
 ![請求書PDF](./screenshots/03-pdf.png)
 
-## CI/CD と自動チェック（GitHub Actions）
+## CI/CD
 
-ブランチ戦略は **feature → PR → `develop` →（リリース）→ `main`**。各タイミングで以下が自動実行されます。
-
-### ワークフロー（3 本）
-
-| ワークフロー      | トリガー                   | 内容                                                                                                                 | 認証          |
-| ----------------- | -------------------------- | -------------------------------------------------------------------------------------------------------------------- | ------------- |
-| `pr-validate.yml` | `develop` への PR          | 使い捨て **scratch org** を作成 → `force-app` をデプロイ（＝Apex/VF のコンパイル・構成検証）→ **Apex テスト** → 破棄 | SFDX Auth URL |
-| `quality.yml`     | `develop` / `main` への PR | 静的解析・整形・セキュリティの各種チェック（下表）。org 不要で高速                                                   | 不要          |
-| `deploy-prod.yml` | `main` への push（マージ） | **Developer Edition 本番へ自動デプロイ**（`RunLocalTests` 実行）                                                     | JWT Bearer    |
-
-> 認証の使い分け：scratch 作成は **SFDX Auth URL**（JWT は新規 scratch にログインできないため）、本番デプロイは **JWT Bearer**（リフレッシュトークンを保存しない）。
-
-### `quality.yml` の各種チェッカー
-
-| チェック         | ツール                                            | 見るもの                                                          |
-| ---------------- | ------------------------------------------------- | ----------------------------------------------------------------- |
-| シークレット検出 | **TruffleHog**                                    | ハードコードされた鍵・トークン・秘密鍵（誤コミット防止）          |
-| コード整形       | **Prettier**                                      | Apex/VF/XML/JS/MD 等のフォーマット統一（`prettier:verify`）       |
-| JS 静的解析      | **ESLint**                                        | LWC/Aura JavaScript のバグ・アンチパターン                        |
-| LWC 単体テスト   | **Jest**（`sfdx-lwc-jest`）                       | LWC コンポーネントのテスト                                        |
-| Apex/JS 静的解析 | **Salesforce Code Analyzer**（PMD / RetireJS 等） | Apex のベストプラクティス・セキュリティ、脆弱な JS ライブラリ検出 |
-
-### 品質の担保
-
-- **Apex テスト カバレッジ 100%**（本番デプロイの 75% 要件を満たす）。
-- PR のチェックが全て緑でないとマージできないゲートとして機能（ブランチ保護を想定）。
-- ローカルでも **husky の pre-commit** で Prettier / ESLint / Jest が走り、コミット前にも弾く二重チェック。
-- ページレイアウト（ボタン配置）まで **メタデータとしてコード管理**し、手動 UI 設定をなくして再現性を確保。
+この機能も GitHub Actions の CI/CD パイプラインの対象です（PR で検証＋各種チェック、`main` マージで Developer Edition へ自動デプロイ。Apex テスト カバレッジ 100%）。詳細は [README の CI/CD](../README.md#cicd) を参照。
 
 ---
 
