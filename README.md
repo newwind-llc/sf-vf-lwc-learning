@@ -67,8 +67,6 @@ GitHub Actions による自動化。ブランチ戦略は **feature → PR → `
 - ローカルでも **husky の pre-commit** で Prettier / ESLint / Jest が走り、コミット前にも弾く二重チェック。
 - ボタン配置・ページ割り当てなど**宣言的設定もメタデータでコード管理**し、手動 UI 設定をなくして再現性を確保。
 
-セットアップ手順：[docs/CICD-SETUP.md](./docs/CICD-SETUP.md)
-
 ## ドキュメント
 
 | ドキュメント                                                                         | 内容                                                                          |
@@ -76,4 +74,3 @@ GitHub Actions による自動化。ブランチ戦略は **feature → PR → `
 | [docs/VF_SHOWCASE.md](./docs/VF_SHOWCASE.md)                                         | VF 帳票（請求書）のショーケース（スクショ付き）                               |
 | [docs/LWC_OPPORTUNITY_KANBAN_SHOWCASE.md](./docs/LWC_OPPORTUNITY_KANBAN_SHOWCASE.md) | LWC 商談カンバン（D&D・ライブ集計）のショーケース（スクショ/GIF 付き）        |
 | [docs/LWC_ACCOUNT360_SHOWCASE.md](./docs/LWC_ACCOUNT360_SHOWCASE.md)                 | LWC 取引先360（KPI・4タブ集約・インライン編集）のショーケース（スクショ付き） |
-| [docs/CICD-SETUP.md](./docs/CICD-SETUP.md)                                           | CI/CD（GitHub Actions + Salesforce）セットアップ手順                          |
