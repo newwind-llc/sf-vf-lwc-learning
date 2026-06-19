@@ -26,6 +26,16 @@ Salesforce の **VisualForce / Apex / LWC** を、実装しながら学ぶプロ
 - 配置（FlexiPage・Sales アプリのページ割り当て）まで**メタデータでコード管理**
 - ここで **ESLint / Jest** が本領を発揮（LWC Jest 5 ケース）
 
+### ⚡ Apex + LWC — 取引先360 コマンドセンター（実装済み）
+
+取引先レコードページ上で、**KPI と 関連レコード（商談 / 連絡先 / ケース / 活動）を集約**し、商談はインライン編集できるコマンドセンター。
+
+➡ **スクリーンショット付き解説：[docs/LWC_ACCOUNT360_SHOWCASE.md](./docs/LWC_ACCOUNT360_SHOWCASE.md)**
+
+- 親子コンポーネント（`account360` ＋ 子 `kpiCard`）、**`@wire`×5** ＋ `lightning-tabset` ＋ `lightning-datatable`
+- KPI は SOQL 集計、読み取り `WITH USER_MODE` / 更新 `AccessLevel.USER_MODE`、活動は Task＋Event を統合
+- 商談タブは**インライン編集 → 保存 → KPI 再計算**（Apex 98% / LWC Jest 3 ケース）
+
 ## CI/CD
 
 GitHub Actions による自動化。ブランチ戦略は **feature → PR → `develop` →（リリース）→ `main`**。VF 帳票・LWC カンバンとも同じパイプラインで検証・デプロイされます。
@@ -61,8 +71,9 @@ GitHub Actions による自動化。ブランチ戦略は **feature → PR → `
 
 ## ドキュメント
 
-| ドキュメント                                                                         | 内容                                                                   |
-| ------------------------------------------------------------------------------------ | ---------------------------------------------------------------------- |
-| [docs/VF_SHOWCASE.md](./docs/VF_SHOWCASE.md)                                         | VF 帳票（請求書）のショーケース（スクショ付き）                        |
-| [docs/LWC_OPPORTUNITY_KANBAN_SHOWCASE.md](./docs/LWC_OPPORTUNITY_KANBAN_SHOWCASE.md) | LWC 商談カンバン（D&D・ライブ集計）のショーケース（スクショ/GIF 付き） |
-| [docs/CICD-SETUP.md](./docs/CICD-SETUP.md)                                           | CI/CD（GitHub Actions + Salesforce）セットアップ手順                   |
+| ドキュメント                                                                         | 内容                                                                          |
+| ------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------- |
+| [docs/VF_SHOWCASE.md](./docs/VF_SHOWCASE.md)                                         | VF 帳票（請求書）のショーケース（スクショ付き）                               |
+| [docs/LWC_OPPORTUNITY_KANBAN_SHOWCASE.md](./docs/LWC_OPPORTUNITY_KANBAN_SHOWCASE.md) | LWC 商談カンバン（D&D・ライブ集計）のショーケース（スクショ/GIF 付き）        |
+| [docs/LWC_ACCOUNT360_SHOWCASE.md](./docs/LWC_ACCOUNT360_SHOWCASE.md)                 | LWC 取引先360（KPI・4タブ集約・インライン編集）のショーケース（スクショ付き） |
+| [docs/CICD-SETUP.md](./docs/CICD-SETUP.md)                                           | CI/CD（GitHub Actions + Salesforce）セットアップ手順                          |
