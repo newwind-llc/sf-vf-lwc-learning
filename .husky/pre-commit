@@ -1,1 +1,9 @@
 npm run precommit
+
+# 秘密検出（gitleaks）: ステージ済み差分をスキャンし、秘密を検出したらコミットを中断する。
+# gitleaks 未インストールの環境では警告だけ出してスキップ（CI の TruffleHog が本丸の二重チェック）。
+if command -v gitleaks >/dev/null 2>&1; then
+  gitleaks git --staged --no-banner --redact
+else
+  echo "⚠ gitleaks 未インストールのため秘密スキャンをスキップしました（brew install gitleaks 推奨。CI の TruffleHog は有効）"
+fi
