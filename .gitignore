@@ -52,6 +52,9 @@ server.crt
 # Serena MCP のローカルプロジェクト状態（ツール固有・コミット不要）
 .serena/
 
+# AI エージェント向けの内部運用指示（ローカルでは使うが公開しない）
+/CLAUDE.md
+
 # Python Salesforce Functions
 **/__pycache__/
 **/.venv/
